@@ -9,7 +9,7 @@ app = Flask(__name__)
 def index():
     nodes = get_nodes()
     block_names = nodes['block_name']
-    return render_template('index.html', title='Test title', blocks=block_names)
+    return render_template('index.html', title='Enter your destination', blocks=block_names)
 
 
 
