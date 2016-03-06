@@ -1,17 +1,27 @@
 from datetime import datetime
 import googlemaps
-
+from utility import get_nodes, get_edges, get_availability
 
 def get_nodes_within_radius(dest, radius):
     pass
 
 
 def get_block_availability(block_id, time):
-    pass
+    availability_df  = get_availability()
+    block_availability_df = availability_df[availability_df['block_id'] == block_id]
+    block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] == time]
+    if block_availability_timed_df.empty:
+        block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] < time]
+        last_block = block_availability_timed_df.max()
+    return last_block
 
 
 def get_node_from_block(block_id):
-    pass
+    edges_df = get_edges()
+    block = edges_df[edges_df['block_id'] == block_id].loc[0]
+    node1 = block.node_id_1
+    node2 = block.node_id_2
+    return node1, node2
 
 
 def deterministic_grav_pull(block_list, origin, time):
