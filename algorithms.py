@@ -47,30 +47,35 @@ def deterministic_grav_pull(block_list, origin, time):
 
     return chosen_block, block_grav_force
 
-# TODO handle exceptions
+
 def get_distance(origin, destination):
     
-    dist_text = "";
-    dist_value = 0; #in meters
+    dist_text = ""
+    dist_value = 0 #in meters
 
     gmaps = googlemaps.Client(key="AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0")
     
     # ex: gmaps.distance_matrix(["37.808322,-122.419212"], ["37.808436,-122.414186"])
-    dm_result = gmaps.distance_matrix(get_lat_long(origin),get_lat_long(destination))
-    dm_rows = ds_result.get("rows",None)
+    dm_result = gmaps.distance_matrix(origin,destination)
+    dm_rows = dm_result.get("rows",None)
 
     for a_dm_row in dm_rows:
         elem_list = a_dm_row.get("elements",None)
-        #there should be only one elem since only one origin and destination is passed
-        for an_elem in elem_list
-            dist_text = an_elem.get("distance").get("text")
-            dist_value = an_elem.get("distance").get("value")
-            break            
+        # there should be only one elem since only one origin and destination is passed
+        dist_text = elem_list[0].get("distance").get("text")
+        dist_value = elem_list[0].get("distance").get("value")
             
     return dist_text, dist_value
 
-def get_lat_long(location):
-    pass
+
+def get_long_lat(block_id):
+    nodes_df = get_nodes()
+    row = nodes_df[nodes_df['block_id'] == block_id].loc[0]
+    longitude = row.longitude
+    latitude = row.latitude
+    long_lat = ['%.6f,%.6f' % (longitude, latitude)]
+    return long_lat
+
 
 def probabilistic_grav_pull(node_list):
     pass
