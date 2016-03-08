@@ -1,4 +1,4 @@
-block_id,longitude,latitude,block_name
+node_id,longitude,latitude,block_name
 7001,37.806249,-122.423884,"Beach and Polk"
 7002,37.805304,-122.423686,"North Point and Polk"
 7003,37.80438,-122.423482,"Bay and Polk"
