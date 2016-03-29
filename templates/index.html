@@ -1,9 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
+ 
     <div class="container">
         <div class="row">
             <div class="col-md-4 col-md-offset-4">
-                <form class="form-horizontal">
+                <!--
+                to be  uncommented
+                <form class="form-horizontal"> -->
                   <div class="form-group">
                     <label for="origin">Origin</label>
                     <select id="origin" class="form-control">
@@ -20,14 +23,200 @@
                         {% endfor %}
                     </select>
                   </div>
+
+                  <div class="form-group">
+                      <label for="datetimepicker1">Date & Time</label>
+                      <div class='input-group date' id='datetimepicker1'>
+                          <input type='text' class="form-control" />
+                          <span class="input-group-addon">
+                              <span class="glyphicon glyphicon-calendar"></span>
+                          </span>
+                      </div>
+                  </div>
+                  <div class="form-group">
+                    <button type="submit" class="btn btn-default" id="submit" onclick="onSubmit()">Submit</button>
+                  </div>
+            </div>
+
                   <!-- <div class="form-group">
                     <label for="date_and_time">Time of day</label>
                     <input type="file" id="date_and_time">
                     <p class="help-block">Example block-level help text here.</p>
                   </div> -->
-                  <button type="submit" class="btn btn-default">Submit</button>
-                </form>
-            </div>
+                  
+                <!-- </form> -->
+            
         </div>
+
+
+        <br/>
+
+        <div class="row" id="resultDiv" style="display:none;">
+            
+            <div class="col-md-6">
+                
+                <div class="panel panel-default">
+                    <div class="panel-heading" align="center">
+                        Deterministic
+                    </div>
+                </div>        
+
+                <div class="well well-small">
+                  <ul class="list-unstyled">
+                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>
+                      <li>Total Time Taken &nbsp; : <span>5 minutes</span></li>
+                      <li>Run Time of the algorithm &nbsp; : <span>15 seconds</span></li>
+                  </ul>
+                </div>  
+
+                <div id="detMapContainer" style="height:500px;">
+
+                </div>
+
+            </div>
+
+            <div class="col-md-6">
+                <div class="panel panel-default">
+                    <div class="panel-heading" align="center">
+                        Probabilistic
+                    </div>
+                </div>
+
+                <div class="well well-small">
+                  <ul class="list-unstyled">
+                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>
+                      <li>Total Time Taken &nbsp; : <span>5 minutes</span></li>
+                      <li>Run Time of the algorithm &nbsp; : <span>15 seconds</span></li>
+                  </ul>
+                </div> 
+
+                <div id="probMapContainer" style="height:500px;">
+
+                </div>
+
+            </div>                            
+
+        </div>
+
+        <script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0"></script>
+        <script type="text/javascript">
+            
+            var detMap = null;
+            var probMap = null;
+            var directionsService = new google.maps.DirectionsService();
+            var dir = null;
+            var geocoder = new google.maps.Geocoder;
+
+
+            //should be from the algo
+            var nodes = [
+              ['Beach and Polk', 37.806249,-122.423884],
+              ['North Point and Polk', 37.805304,-122.423686],
+              ['North Point and Larkin', 37.80552,-122.422044]
+            ];  
+
+            function onSubmit(){
+
+                document.getElementById('resultDiv').style.display = "block";
+
+                //run the algo one by one and load map
+                loadMap(detMap, "detMapContainer");
+                loadMap(probMap, "probMapContainer");
+
+                //addMarkersToMap(detMap);
+                //addMarkersToMap(probMap);
+
+                displayRoute("37.806249,-122.423884","37.805304,-122.423686", detMap);
+                displayRoute("37.806249,-122.423884","37.805304,-122.423686", probMap);
+            }
+
+            function displayRoute(start, end, map) {
+                var start = new google.maps.LatLng(start);                
+                var end = new google.maps.LatLng(end);
+                
+                var request = {
+                    //origin: geocodeLatLng(start, geocoder, map),
+                    //destination: geocodeLatLng(destination, geocoder, map),
+
+                    origin: start,
+                    destination: end,
+
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+                
+                directionsService.route(request, function (response, status) {
+                    if (status == google.maps.DirectionsStatus.OK) {
+                        dir.setDirections(response);
+                        dir.setMap(map);
+                    } else {
+                        alert("DirectionsService failed!!"+status);
+                    }
+                });
+            }
+
+            //not used currently
+            function geocodeLatLng(input, geocoder, map) {              
+              var latlngStr = input.toString().split(',', 2);
+              var latlng = {lat: parseFloat(latlngStr[0]), lng: parseFloat(latlngStr[1])};
+              alert(latlng.lat);
+
+              geocoder.geocode({'location': latlng}, function(results, status) {
+                if (status === google.maps.GeocoderStatus.OK) {
+                  if (results[1]) {                   
+                    return results[1].formatted_address;                    
+                  } else {
+                    window.alert('No results found');
+                  }
+                } else {
+                  window.alert('Geocoder failed due to: ' + status);
+                }
+              });
+
+              return null;
+            }
+
+            function addMarkersToMap(map){
+
+              var marker, i;
+              var infowindow = new google.maps.InfoWindow();
+
+              for (i = 0; i < nodes.length; i++) {  
+                
+                marker = new google.maps.Marker({
+                  position: new google.maps.LatLng(nodes[i][1], nodes[i][2]),
+                  map: map,
+                  visible:true
+                });
+
+                google.maps.event.addListener(marker, 'click', (function(marker, i) {
+                  return function() {
+                    infowindow.setContent(nodes[i][0]);
+                    infowindow.open(map, marker);
+                  }
+                })(marker, i));
+              }
+            }
+
+            function loadMap(map, containerName){
+                                
+                var mapOptions = {
+                    zoom: 17,
+                    center: new google.maps.LatLng(37.80552,-122.422044),
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                };
+               
+                map = new google.maps.Map(document.getElementById(containerName), mapOptions);                
+                
+                addMarkersToMap(map);
+            }
+
+            $(function () {
+                $('#datetimepicker1').datetimepicker();
+            });
+
+        </script>
+
     </div>
 {% endblock %}
+
+
