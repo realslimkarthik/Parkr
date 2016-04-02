@@ -9,9 +9,18 @@ def get_nodes():
 
 def get_edges(distance=False):
     if distance:
-        return pandas.read_csv(data_path.format('Edges_FishermansWharf_with_Distance'))
+        df = pandas.read_csv(data_path.format('Edges_FishermansWharf_with_Distance'))
     else:
-        return pandas.read_csv(data_path.format('Edges_FishermansWharf'))
+        df = pandas.read_csv(data_path.format('Edges_FishermansWharf'))
+
+    df = df[df['block_id'] != -1]
+    return df
+
+
+def get_block_list():
+    nodes_df = pandas.read_csv(data_path.format('Edges_FishermansWharf'))
+    block_ids = nodes_df[nodes_df['block_id'] != -1]
+    return block_ids['block_id']
 
 
 def get_availability():
@@ -27,3 +36,27 @@ def get_availability():
 
     df['timestamp'] = df['timestamp'].apply(convert_to_datetime)
     return df
+
+
+def get_distances():
+    return pandas.read_csv(data_path.format('Nodes_FishermansWharf_Distances'))
+
+
+def get_distance(origin, destination):
+    
+    dist_text = ""
+    dist_value = 0 #in meters
+
+    gmaps = googlemaps.Client(key="AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0")
+    
+    # ex: gmaps.distance_matrix(["37.808322,-122.419212"], ["37.808436,-122.414186"])
+    dm_result = gmaps.distance_matrix(origin, destination)
+    dm_rows = dm_result.get("rows",None)
+
+    for a_dm_row in dm_rows:
+        elem_list = a_dm_row.get("elements",None)
+        # there should be only one elem since only one origin and destination is passed
+        dist_text = elem_list[0].get("distance").get("text")
+        dist_value = elem_list[0].get("distance").get("value")
+            
+    return dist_text, dist_value
