@@ -1,42 +1,13 @@
 from datetime import datetime, timedelta
 import googlemaps
-from utility import get_nodes, get_edges, get_block_list, get_availability, get_distances
-
-
-def get_block_availability(block_id, time):
-    availability_df  = get_availability()
-    block_availability_df = availability_df[availability_df['block_id'] == block_id]
-    block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] == time]
-    if block_availability_timed_df.empty:
-        block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] < time]
-        last_block = block_availability_timed_df.max().available
-    return last_block
-
-
-def get_node_from_block(block_id):
-    edges_df = get_edges()
-    block = edges_df[edges_df['block_id'] == block_id].iloc[0]
-    node1 = block.node_id_1
-    node2 = block.node_id_2
-    return node1, node2
-
-
-def get_node_id_from_long_lat(longitude, latitude):
-    nodes_df = get_nodes()
-    long_df = nodes_df[nodes_df['longitude'] == longitude & nodes_df['latitude'] == latitude]
-    long_lat_node = long_df.iloc[0]
-    node_id = long_lat_node.block_id
-    return node_id
+from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
+    get_long_lat, get_block_availability, get_distance, get_block_probability
 
 
 def deterministic_grav_pull(block_list, origin, time):
-    num_available_blocks = 0
-    node_distances = {}
-    node_availability = {}
     block_grav_force = {}
     chosen_block = None
     max_force = 0
-    block_list = filter(lambda x: x != origin, block_list)
     for block in block_list:
         availability = get_block_availability(block, time)
         if availability != 0:
@@ -46,8 +17,6 @@ def deterministic_grav_pull(block_list, origin, time):
             elif node2 == origin:
                 block_distance = get_distance(origin, node1)
             else:
-                node1_long_lat = get_long_lat(node1)
-                node2_long_lat = get_long_lat(node2)
                 block_distance_to_node1 = get_distance(origin, node1)
                 block_distance_to_node2 = get_distance(origin, node2)
                 block_distance = min(block_distance_to_node1, block_distance_to_node2)
@@ -62,25 +31,32 @@ def deterministic_grav_pull(block_list, origin, time):
     return chosen_block
 
 
-def get_long_lat(node_id):
-    nodes_df = get_nodes()
-    row = nodes_df[nodes_df['node_id'] == node_id]
-    longitude = row.longitude
-    latitude = row.latitude
-    long_lat = [float(longitude), float(latitude)]
-    return long_lat
-
-
-def get_distance(node1, node2):
-    distance_df = get_distances()
-    row = distance_df[(distance_df['node_id_1'] == node1) & (distance_df['node_id_2'] == node2)].iloc[0]
-    distance = row.distance
-    return distance
-
-
-
-def probabilistic_grav_pull(node_list):
-    pass
+def probabilistic_grav_pull(block_list, origin, time):
+    block_grav_force = {}
+    chosen_block = None
+    max_force = 0
+    for block in block_list:
+        probability = get_block_probability(block, time)
+        if probability != 0:
+            node1, node2 = get_node_from_block(block)
+            if node1 == origin:
+                block_distance = get_distance(origin, node2)
+            elif node2 == origin:
+                block_distance = get_distance(origin, node1)
+            else:
+                # block_distance_to_node1 = get_distance(origin, node1)
+                # block_distance_to_node2 = get_distance(origin, node2)
+                block_distance = min(get_distance(origin, node1), get_distance(origin, node2))
+                # block_distance = min(block_distance_to_node1, block_distance_to_node2)
+            block_grav_force[block] = probability / block_distance ** 2
+        else:
+            block_grav_force[block] = 0
+        print(block_grav_force[block])
+        if max_force < block_grav_force[block]:
+            max_force = block_grav_force[block]
+            chosen_block = block
+    
+    return chosen_block
 
 
 def uninformed_search():
@@ -130,8 +106,8 @@ def get_parking_spot(origin, destination, time, algorithm):
     block_list = get_block_list()
     if algorithm == 'd':
         chosen_block = deterministic_grav_pull(block_list, origin, time)
-    # elif algorithm == 'p':
-    #     chosen_block = probabilistic_grav_pull(block_list, origin, time)
+    elif algorithm == 'p':
+        chosen_block = probabilistic_grav_pull(block_list, origin, time)
     else:
         print('algorithm should be d for deterministic_grav_pull or p for probabilistic_grav_pull')
         chosen_block = -1
