@@ -126,7 +126,7 @@ def get_turn_by_turn_directions(origin, destination, departure_time):
     return dir_list
  
 
-def get_parking_spot(origin, destination, time, algorithm='d'):
+def get_parking_spot(origin, destination, time, algorithm):
     block_list = get_block_list()
     if algorithm == 'd':
         chosen_block = deterministic_grav_pull(block_list, origin, time)
@@ -157,15 +157,19 @@ def get_directions(origin, destination, time):
 def check_sample(seed):
     i = 1
     while True:
-        if i / seed == 1:
+        try:
+            sample_value = i / seed
+        except ZeroDivisionError:
+            sample_value = 1.1
+        if sample_value == int(sample_value):
             yield True
         else:
             yield False
 
 
-def route_vehicle(origin, destination, time, sampling_rate):
+def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     chosen_block = {}
-    chosen_block['block_id'] = get_parking_spot(origin, destination, time)
+    chosen_block['block_id'] = get_parking_spot(origin, destination, time, algorithm)
     directions = get_directions(origin, destination, time)
     sampler = check_sample(sampling_rate)
     distance = 0
@@ -183,7 +187,7 @@ def route_vehicle(origin, destination, time, sampling_rate):
         if next(sampler):
             block_availability = get_block_availability(chosen_block['block_id'], time)
             if block_availability == 0:
-                chosen_block['block_id'] = get_parking_spot(origin, destination, time)
+                chosen_block['block_id'] = get_parking_spot(origin, destination, time, algorithm)
                 
                 if chosen_block['block_id'] == -1:
                     distance = -1
@@ -207,36 +211,20 @@ def route_vehicle(origin, destination, time, sampling_rate):
         current_location = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
         routing_data['success'] = False
 
+    routing_data['time'] = time
     routing_data['distance'] = distance
     routing_data['current_location'] = current_location
     
     return routing_data
 
 
-def simulate(origin, destination, time, algorithm):
-    chosen_block = {}
-    radius = 100
-    chosen_block['block_id'] = None
-    origin_long_lat = get_long_lat(origin)
-    destination_long_lat = get_long_lat(destination)
-
-    origin_dest_distance = get_distance(origin_long_lat, destination_long_lat)
-    
-    while chosen_block['block_id'] is None:
-        chosen_block['block_id'] = get_parking_spot(origin, destination, time, radius)
-        if radius > origin_dest_distance:
-            break
-        radius += 50
-    
-    node1, node2 = get_node_from_block(chosen_block['block_id'])
-    node1_long_lat = get_long_lat(node1)
-    node2_long_lat = get_long_lat(node2)
-
-    if get_distance(origin_long_lat, node1_long_lat) < get_distance(origin_long_lat, node2_long_lat):
-        chosen_block['node_id'] = node1
-    else:
-        chosen_block['node_id'] = node2
-
-    distance = route_vehicle(origin, chosen_block['node_id'], time)
-
-    return distance
+def simulate(origin, destination, time, algorithm, sampling_rate):
+    route_result = {'distance': 0, 'success': False, 'current_location': origin, 'time': time}
+    while not route_result['success']:
+        new_result = route_vehicle(route_result['current_location'], destination, route_result['time'], algorithm, sampling_rate)
+        if new_result['success']:
+            route_result['distance'] += new_result['distance']
+            route_result['success'] = new_result['success']
+            route_result['current_location'] = new_result['success']
+            route_result['time'] = new_result['time']
+    return route_result['distance']
