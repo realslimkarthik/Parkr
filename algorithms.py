@@ -153,6 +153,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     current_location = None
     routing_data = {}
     routing_data['success'] = True
+    routing_data['points'] = [get_long_lat(origin)]
 
 
     while True:
@@ -168,8 +169,9 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
                 if chosen_block['block_id'] == -1:
                     distance = -1
                     break
-
-                current_location = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                current_location = intermediate_point
+                routing_data['points'].append(intermediate_point)
                 new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
                 if get_distance(origin, new_node1) < get_distance(origin, new_node2):
                     chosen_block['node_id'] = new_node1
@@ -184,9 +186,9 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
 
     block_availability = get_block_availability(chosen_block['block_id'], time)
     if block_availability == 0:
-        current_location = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
         routing_data['success'] = False
-
+    current_location = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+        
     routing_data['time'] = time
     routing_data['distance'] = distance
     routing_data['current_location'] = current_location
@@ -195,12 +197,15 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
 
 
 def simulate(origin, destination, time, algorithm, sampling_rate):
-    route_result = {'distance': 0, 'success': False, 'current_location': origin, 'time': time}
+    route_result = {'distance': 0, 'success': False, 'current_location': origin, 'time': time, 'points': []}
     while not route_result['success']:
         new_result = route_vehicle(route_result['current_location'], destination, route_result['time'], algorithm, sampling_rate)
         if new_result['success']:
             route_result['distance'] += new_result['distance']
             route_result['success'] = new_result['success']
-            route_result['current_location'] = new_result['success']
+            route_result['current_location'] = new_result['current_location']
             route_result['time'] = new_result['time']
-    return route_result['distance']
+            route_result['points'].extend(new_result['points'])
+            route_result['points'].append(new_result['current_location'])
+
+    return route_result
