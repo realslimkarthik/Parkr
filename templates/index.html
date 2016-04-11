@@ -63,9 +63,8 @@
 
                 <div class="well well-small">
                   <ul class="list-unstyled">
-                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>
-                      <li>Total Time Taken &nbsp; : <span>5 minutes</span></li>
-                      <li>Run Time of the algorithm &nbsp; : <span>15 seconds</span></li>
+                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>                      
+                      <li>Run Time of the algorithm &nbsp; : <span>7 seconds</span></li>
                   </ul>
                 </div>  
 
@@ -84,9 +83,8 @@
 
                 <div class="well well-small">
                   <ul class="list-unstyled">
-                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>
-                      <li>Total Time Taken &nbsp; : <span>5 minutes</span></li>
-                      <li>Run Time of the algorithm &nbsp; : <span>15 seconds</span></li>
+                      <li>Total Distance Travelled &nbsp; : <span>2,000 meters</span></li>                      
+                      <li>Run Time of the algorithm &nbsp; : <span>5 seconds</span></li>
                   </ul>
                 </div> 
 
@@ -98,16 +96,13 @@
 
         </div>
 
+        <!-- Plot changes start -->
+
+        <!-- Plot changes end -->
+
         <script src="http://maps.googleapis.com/maps/api/js?key=AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0"></script>
         <script type="text/javascript">
-            
-            var detMap = null;
-            var probMap = null;
-            var directionsService = new google.maps.DirectionsService();
-            var dir = null;
-            var geocoder = new google.maps.Geocoder;
-
-
+                        
             //should be from the algo
             var nodes = [
               ['Beach and Polk', 37.806249,-122.423884],
@@ -118,38 +113,36 @@
             function onSubmit(){
 
                 document.getElementById('resultDiv').style.display = "block";
-
-                //run the algo one by one and load map
-                loadMap(detMap, "detMapContainer");
-                loadMap(probMap, "probMapContainer");
-
-                //addMarkersToMap(detMap);
-                //addMarkersToMap(probMap);
-
-                displayRoute("37.806249,-122.423884","37.805304,-122.423686", detMap);
-                displayRoute("37.806249,-122.423884","37.805304,-122.423686", probMap);
+                
+                displayRoute("37.80552,-122.422044","37.806249,-122.423884","37.805304,-122.423686", "detMapContainer");
+                displayRoute("37.80552,-122.422044","37.806249,-122.423884","37.80552,-122.422044", "probMapContainer");
             }
 
-            function displayRoute(start, end, map) {
-                var start = new google.maps.LatLng(start);                
-                var end = new google.maps.LatLng(end);
+            function displayRoute(center, start, end, containerName) {
                 
-                var request = {
-                    //origin: geocodeLatLng(start, geocoder, map),
-                    //destination: geocodeLatLng(destination, geocoder, map),
-
+                var mapOptions = {
+                    zoom: 15,
+                    center: center
+                };               
+                var map = new google.maps.Map(document.getElementById(containerName), mapOptions);                                
+                var dirRenderer = new google.maps.DirectionsRenderer;
+                
+                dirRenderer.setMap(map);
+                //addMarkersToMap(map);
+                
+                var directionsService = new google.maps.DirectionsService;
+                
+                var request = {                    
                     origin: start,
                     destination: end,
-
                     travelMode: google.maps.TravelMode.DRIVING
                 };
                 
-                directionsService.route(request, function (response, status) {
-                    if (status == google.maps.DirectionsStatus.OK) {
-                        dir.setDirections(response);
-                        dir.setMap(map);
+                directionsService.route(request, function (response, status) {                    
+                    if (status == google.maps.DirectionsStatus.OK) {                        
+                        dirRenderer.setDirections(response);                        
                     } else {
-                        alert("DirectionsService failed!!"+status);
+                        //alert("DirectionsService failed!!"+status);
                     }
                 });
             }
@@ -162,13 +155,13 @@
 
               geocoder.geocode({'location': latlng}, function(results, status) {
                 if (status === google.maps.GeocoderStatus.OK) {
-                  if (results[1]) {                   
-                    return results[1].formatted_address;                    
-                  } else {
-                    window.alert('No results found');
-                  }
+                    if (results[1]) {                   
+                        return results[1].formatted_address;                    
+                    } else {
+                        alert('No results found');
+                    }
                 } else {
-                  window.alert('Geocoder failed due to: ' + status);
+                    alert('Geocoder failed due to: ' + status);
                 }
               });
 
@@ -196,25 +189,13 @@
                 })(marker, i));
               }
             }
-
-            function loadMap(map, containerName){
-                                
-                var mapOptions = {
-                    zoom: 17,
-                    center: new google.maps.LatLng(37.80552,-122.422044),
-                    mapTypeId: google.maps.MapTypeId.ROADMAP
-                };
-               
-                map = new google.maps.Map(document.getElementById(containerName), mapOptions);                
-                
-                addMarkersToMap(map);
-            }
-
+            
             $(function () {
                 $('#datetimepicker1').datetimepicker();
             });
 
         </script>
+        
 
     </div>
 {% endblock %}
