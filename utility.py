@@ -1,7 +1,34 @@
+import csv
 from datetime import datetime
+import random
 import pandas
 
+
 data_path = './data/{0}.csv'
+
+
+def reset_live_data(congestion=0):
+    df = pandas.read_csv(data_path.format('real_time_data_with_time'))
+    df = introduce_congestion(df, congestion)
+    df.to_csv(data_path.format('real_time_data_with_time_live'))
+
+
+def introduce_congestion(df, congestion):
+    total_spots = sum([i for i in df['available']])
+    number_of_removed_spots = (congestion * total_spots) // 100
+    for i in range(0, len(df)):
+        row = df.iloc[i]
+        if row.available > 0:
+            num = random.randint(0, row.available)
+            row.available -= num
+            number_of_removed_spots -= num
+            df.iloc[i] = row
+
+        if number_of_removed_spots == 0:
+            break
+
+    return df
+
 
 def get_nodes():
     return pandas.read_csv(data_path.format('Nodes_FishermansWharf'))
@@ -23,11 +50,8 @@ def get_block_list():
     return block_ids['block_id']
 
 
-def get_availability(with_time=False):
-    if with_time:
-        df = pandas.read_csv(data_path.format('real_time_data_with_time'))
-    else:
-        df = pandas.read_csv(data_path.format('real_time_data'))
+def get_availability():
+    df = pandas.read_csv(data_path.format('real_time_data_with_time_live'))
 
     def convert_to_datetime(date_time_str):
         date_str, time_str = date_time_str.split()
@@ -39,6 +63,23 @@ def get_availability(with_time=False):
 
     df['timestamp'] = df['timestamp'].apply(convert_to_datetime)
     return df
+
+
+def remove_block(block_id, timestamp):
+    availability_df = get_availability()
+    last_block = get_last_block_row(block_id, timestamp)
+    availability = last_block.available - 1
+    no_blocks = last_block.no_blocks
+    block_availability_df = availability_df[availability_df['timestamp'] == timestamp]
+    if not block_availability_df.empty:
+        availability_df = availability_df[(availability_df['timestamp'] != timestamp) & (availability_df['block_id'] != block_id)]
+    day = timestamp.day
+    weekday = timestamp.weekday
+    month = timestamp.month
+    hour = timestamp.hour
+    availability_df = availability_df.append({'block_id': block_id, 'timestamp': timestamp, 'day': day,
+        'month': month, 'hour': hour, 'weekday': weekday, 'no_blocks': no_blocks, 'available': availability})
+    availability_df.to_csv(data_path.format('real_time_data_with_time_live'))
 
 
 def get_distances():
@@ -65,14 +106,24 @@ def get_distance(origin, destination):
     return dist_text, dist_value
 
 
-def get_block_availability(block_id, time):
+def get_last_block_row(block_id, time):
     availability_df  = get_availability()
     block_availability_df = availability_df[availability_df['block_id'] == block_id]
     block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] == time]
     if block_availability_timed_df.empty:
         block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] < time]
-        last_block = block_availability_timed_df.max().available
+    last_block = block_availability_timed_df.max()
     return last_block
+
+def get_block_availability(block_id, time):
+    # availability_df  = get_availability()
+    # block_availability_df = availability_df[availability_df['block_id'] == block_id]
+    # block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] == time]
+    # if block_availability_timed_df.empty:
+    #     block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] < time]
+    # last_block = block_availability_timed_df.max().available
+    last_block = get_last_block_row(block_id, time)
+    return last_block.available
 
 
 def get_node_from_block(block_id):
@@ -124,7 +175,7 @@ def get_block_probability(block_id, time, fine_grained=True):
     weekday = time.weekday()
     hour = time.hour
     minute = time.minute
-    availability_df = get_availability(with_time=True)
+    availability_df = get_availability()
     block_df = availability_df[availability_df['block_id'] == block_id]
     if fine_grained:
         day_df = block_df[block_df['weekday'] == weekday]
@@ -141,3 +192,34 @@ def get_block_probability(block_id, time, fine_grained=True):
 
     return probability
 
+
+def format_results(data):
+    fieldnames = ['input_no', 'distance']
+    formatted_data = [{'input_no': row_num + 1, 'distance': row['distance']} for row_num, row in enumerate(data)]
+    return formatted_data, fieldnames
+
+
+def write_results_to_file(data, fieldnames, file_name):
+    formatted_data, new_fields = format_results(data)
+    with open(file_name, 'w') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=new_fields)
+        writer.writeheader()
+        for row in formatted_data:
+            writer.writerow(row)
+
+
+def read_input_from_file(input_file):
+    df = pandas.read_csv(input_file)
+
+    def convert_to_datetime(date_time_str):
+        date_str, time_str = date_time_str.split()
+        year, month, day = [int(i) for i in date_str.split('-')]
+        time_str, millisecond = time_str.split('.')
+        hour, minute, second = [int(i) for i in time_str.split(':')]
+        millisecond = int(millisecond)
+        return datetime(year, month, day, hour, minute, second, millisecond)
+
+    df['time'] = df['time'].apply(convert_to_datetime)
+
+    input_data = df.to_dict('records')
+    return input_data
