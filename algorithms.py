@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
 import googlemaps
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
-    get_long_lat, get_block_availability, get_distance, get_block_probability
+    get_long_lat, get_block_availability, get_distance, get_block_probability, reset_live_data, read_input_from_file, \
+    write_results_to_file
 
 
 def deterministic_grav_pull(block_list, origin, time):
@@ -209,3 +210,19 @@ def simulate(origin, destination, time, algorithm, sampling_rate):
             route_result['points'].append(new_result['current_location'])
 
     return route_result
+
+
+def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file_name):
+    reset_live_data(congestion)
+    input_data = read_input_from_file(input_file)
+    output_data = []
+
+    for i in input_data:
+        result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
+        output_data.append(result)
+
+    fieldnames = output_data[0].keys()
+    write_results_to_file(output_data, fieldnames, output_file_name)
+    return output_data
+
+
