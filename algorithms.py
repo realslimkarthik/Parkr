@@ -8,6 +8,8 @@ from utility import get_nodes, get_edges, get_block_list, get_availability, get_
 def deterministic_grav_pull(block_list, origin, time):
     block_grav_force = {}
     chosen_block = None
+    chosen_node = None
+    current_node = None
     max_force = 0
     for block in block_list:
         availability = get_block_availability(block, time)
@@ -15,12 +17,18 @@ def deterministic_grav_pull(block_list, origin, time):
             node1, node2 = get_node_from_block(block)
             if node1 == origin:
                 block_distance = get_distance(origin, node2)
+                current_node = node2
             elif node2 == origin:
                 block_distance = get_distance(origin, node1)
+                current_node = node1
             else:
                 block_distance_to_node1 = get_distance(origin, node1)
                 block_distance_to_node2 = get_distance(origin, node2)
                 block_distance = min(block_distance_to_node1, block_distance_to_node2)
+                if block_distance_to_node1 >= block_distance_to_node2:
+                    current_node = node1
+                else:
+                    current_node = node2
             block_grav_force[block] = availability / block_distance ** 2
         else:
             block_grav_force[block] = 0
@@ -28,8 +36,8 @@ def deterministic_grav_pull(block_list, origin, time):
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
-
-    return chosen_block
+            chosen_node = current_node
+    return chosen_block, chosen_node
 
 
 def probabilistic_grav_pull(block_list, origin, time):
@@ -106,14 +114,14 @@ def get_turn_by_turn_directions(origin, destination, departure_time):
 def get_parking_spot(origin, destination, time, algorithm):
     block_list = get_block_list()
     if algorithm == 'd':
-        chosen_block = deterministic_grav_pull(block_list, origin, time)
+        chosen_block, chosen_node = deterministic_grav_pull(block_list, origin, time)
     elif algorithm == 'p':
-        chosen_block = probabilistic_grav_pull(block_list, origin, time)
+        chosen_block, chosen_node = probabilistic_grav_pull(block_list, origin, time)
     else:
         print('algorithm should be d for deterministic_grav_pull or p for probabilistic_grav_pull')
         chosen_block = -1
     
-    return chosen_block
+    return chosen_block, chosen_node
 
 
 def get_directions(origin, destination, time):
@@ -146,8 +154,10 @@ def check_sample(seed):
 
 def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     chosen_block = {}
-    chosen_block['block_id'] = get_parking_spot(origin, destination, time, algorithm)
-    directions = get_directions(origin, destination, time)
+    chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(origin, destination, time, algorithm)
+    if not chosen_block.get('block_id'):
+        return None
+    directions = get_directions(origin, chosen_block['node_id'], time)
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
@@ -165,7 +175,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
         if next(sampler):
             block_availability = get_block_availability(chosen_block['block_id'], time)
             if block_availability == 0:
-                chosen_block['block_id'] = get_parking_spot(origin, destination, time, algorithm)
+                chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(origin, destination, time, algorithm)
                 
                 if chosen_block['block_id'] == -1:
                     distance = -1
@@ -201,7 +211,13 @@ def simulate(origin, destination, time, algorithm, sampling_rate):
     route_result = {'distance': 0, 'success': False, 'current_location': origin, 'time': time, 'points': []}
     while not route_result['success']:
         new_result = route_vehicle(route_result['current_location'], destination, route_result['time'], algorithm, sampling_rate)
-        if new_result['success']:
+        if new_result is None:
+            route_result['distance'] = 'NA'
+            route_result['success'] = 'NA'
+            route_result['current_location'] = None
+            route_result['time'] = None
+            route_result['points'] = None
+        elif new_result['success']:
             route_result['distance'] += new_result['distance']
             route_result['success'] = new_result['success']
             route_result['current_location'] = new_result['current_location']
