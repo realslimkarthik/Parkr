@@ -28,14 +28,14 @@ def deterministic_grav_pull(block_list, destination, time):
     return chosen_block, chosen_node
 
 
-def probabilistic_grav_pull(block_list, destination, time):
+def probabilistic_grav_pull(block_list, destination, time, fine_grained=True):
     block_grav_force = {}
     chosen_block = None
     chosen_node = None
     current_node = None
     max_force = 0
     for block in block_list:
-        probability = get_block_probability(block, time)
+        probability = get_block_probability(block, time, fine_grained)
         if probability != 0:
             node1, node2 = get_node_from_block(block)
             current_node, block_distance = get_distance_from_block_to_node(block, destination)
@@ -105,8 +105,11 @@ def get_parking_spot(destination, time, algorithm):
     block_list = get_block_list()
     if algorithm == 'd':
         chosen_block, chosen_node = deterministic_grav_pull(block_list, destination, time)
-    elif algorithm == 'p':
-        chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time)
+    elif algorithm.startswith('p'):
+        if algorithm == 'p'
+            chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time)
+        else:
+            chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time, fine_grained=False)
     else:
         print('algorithm should be d for deterministic_grav_pull or p for probabilistic_grav_pull')
         chosen_block = -1
