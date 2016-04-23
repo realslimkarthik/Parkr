@@ -20,7 +20,6 @@ def deterministic_grav_pull(block_list, destination, time):
             block_grav_force[block] = availability / block_distance ** 2
         else:
             block_grav_force[block] = 0
-        # print(block_grav_force[block])
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
@@ -42,7 +41,6 @@ def probabilistic_grav_pull(block_list, destination, time, fine_grained=True):
             block_grav_force[block] = probability / block_distance ** 2
         else:
             block_grav_force[block] = 0
-        # print(block_grav_force[block])
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
@@ -225,8 +223,6 @@ def simulate(origin, destination, time, algorithm, sampling_rate):
             route_result['points'].extend(new_result['points'])
             route_result['points'].append(new_result['current_location'])
         route_result['running_time'] = running_time
-        print(route_result['running_time'])
-        print(route_result['walking_distance'])
 
     return route_result
 
@@ -239,8 +235,8 @@ def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file
     for i in input_data:
         result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
         uninformed_search_distance = uninformed_search(i['origin'], i['destination'])
-        result['uninformed_search_distance'] = uninformed_search_distance
-        print(result['uninformed_search_distance'])
+        result['uninformed_search_distance'] = int(uninformed_search_distance)
+        print(result)
         output_data.append(result)
 
     fieldnames = output_data[0].keys()
