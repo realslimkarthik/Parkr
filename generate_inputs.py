@@ -12,7 +12,7 @@ def get_day(month):
     if month == 4:
         day = randrange(1, 31)
     elif month == 5:
-        day = randrange(1, 32)
+        day = randrange(1, 6)
     return day
 
 
