@@ -1,8 +1,9 @@
+from time import time as time_fn
 from datetime import datetime, timedelta
 import googlemaps
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
-    get_long_lat, get_block_availability, get_distance, get_block_probability, get_adjacent_nodes, \
-    reset_live_data, read_input_from_file, write_results_to_file
+    get_long_lat, get_block_availability, get_distance, get_distance_from_block_to_node, get_block_probability, \
+    get_adjacent_nodes, reset_live_data, read_input_from_file, write_results_to_file
 
 
 def deterministic_grav_pull(block_list, destination, time):
@@ -15,24 +16,11 @@ def deterministic_grav_pull(block_list, destination, time):
         availability = get_block_availability(block, time)
         if availability != 0:
             node1, node2 = get_node_from_block(block)
-            if node1 == destination:
-                block_distance = get_distance(destination, node2)
-                current_node = node2
-            elif node2 == destination:
-                block_distance = get_distance(destination, node1)
-                current_node = node1
-            else:
-                block_distance_to_node1 = get_distance(destination, node1)
-                block_distance_to_node2 = get_distance(destination, node2)
-                block_distance = min(block_distance_to_node1, block_distance_to_node2)
-                if block_distance_to_node1 >= block_distance_to_node2:
-                    current_node = node1
-                else:
-                    current_node = node2
+            current_node, block_distance = get_distance_from_block_to_node(block, destination)
             block_grav_force[block] = availability / block_distance ** 2
         else:
             block_grav_force[block] = 0
-        print(block_grav_force[block])
+        # print(block_grav_force[block])
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
@@ -50,22 +38,11 @@ def probabilistic_grav_pull(block_list, destination, time):
         probability = get_block_probability(block, time)
         if probability != 0:
             node1, node2 = get_node_from_block(block)
-            if node1 == destination:
-                block_distance = get_distance(destination, node2)
-            elif node2 == destination:
-                block_distance = get_distance(destination, node1)
-            else:
-                block_distance_to_node1 = get_distance(destination, node1)
-                block_distance_to_node2 = get_distance(destination, node2)
-                block_distance = min(block_distance_to_node1, block_distance_to_node2)
-                if block_distance_to_node1 >= block_distance_to_node2:
-                    current_node = node1
-                else:
-                    current_node = node2
+            current_node, block_distance = get_distance_from_block_to_node(block, destination)
             block_grav_force[block] = probability / block_distance ** 2
         else:
             block_grav_force[block] = 0
-        print(block_grav_force[block])
+        # print(block_grav_force[block])
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
@@ -74,7 +51,7 @@ def probabilistic_grav_pull(block_list, destination, time):
 
 
 def uninformed_search(origin, destination, worst_case=False):
-    distance += get_distance(origin, destination)
+    distance = get_distance(origin, destination)
     extra_distance = 0
     adjacent_nodes = get_adjacent_nodes(destination)
     for node in adjacent_nodes:
@@ -206,13 +183,15 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
 
         step_index += 1
         if step_index == len(directions):
+            _, walking_distance = get_distance_from_block_to_node(chosen_block['block_id'], destination)
             break
 
     block_availability = get_block_availability(chosen_block['block_id'], time)
     if block_availability == 0:
         routing_data['success'] = False
+        walking_distance = None
     current_location = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
-        
+    routing_data['walking_distance'] = walking_distance
     routing_data['time'] = time
     routing_data['distance'] = distance
     routing_data['current_location'] = current_location
@@ -223,20 +202,28 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
 def simulate(origin, destination, time, algorithm, sampling_rate):
     route_result = {'distance': 0, 'success': False, 'current_location': origin, 'time': time, 'points': []}
     while not route_result['success']:
+        time1 = time_fn()
         new_result = route_vehicle(route_result['current_location'], destination, route_result['time'], algorithm, sampling_rate)
+        time2 = time_fn()
+        running_time = time2 - time1
         if new_result is None:
             route_result['distance'] = 'NA'
             route_result['success'] = 'NA'
             route_result['current_location'] = None
             route_result['time'] = None
             route_result['points'] = None
+            route_result['walking_distance'] = 'NA'
         elif new_result['success']:
             route_result['distance'] += new_result['distance']
+            route_result['walking_distance'] = new_result['walking_distance']
             route_result['success'] = new_result['success']
             route_result['current_location'] = new_result['current_location']
             route_result['time'] = new_result['time']
             route_result['points'].extend(new_result['points'])
             route_result['points'].append(new_result['current_location'])
+        route_result['running_time'] = running_time
+        print(route_result['running_time'])
+        print(route_result['walking_distance'])
 
     return route_result
 
@@ -250,6 +237,7 @@ def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file
         result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
         uninformed_search_distance = uninformed_search(i['origin'], i['destination'])
         result['uninformed_search_distance'] = uninformed_search_distance
+        print(result['uninformed_search_distance'])
         output_data.append(result)
 
     fieldnames = output_data[0].keys()
