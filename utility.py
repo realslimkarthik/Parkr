@@ -86,7 +86,7 @@ def get_distances():
     return pandas.read_csv(data_path.format('Nodes_FishermansWharf_Distances'))
 
 
-def get_distance(origin, destination):
+def get_distance_google_maps(origin, destination):
     
     dist_text = ""
     dist_value = 0 #in meters
@@ -115,15 +115,24 @@ def get_last_block_row(block_id, time):
     last_block = block_availability_timed_df.max()
     return last_block
 
+
 def get_block_availability(block_id, time):
-    # availability_df  = get_availability()
-    # block_availability_df = availability_df[availability_df['block_id'] == block_id]
-    # block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] == time]
-    # if block_availability_timed_df.empty:
-    #     block_availability_timed_df = block_availability_df[block_availability_df['timestamp'] < time]
-    # last_block = block_availability_timed_df.max().available
     last_block = get_last_block_row(block_id, time)
     return last_block.available
+
+
+def get_adjacent_nodes(node_id):
+    edges_df = get_edges()
+    edges_df = edges_df[edges_df['node_id_1'] == node_id | edges_df['node_id_2'] == node_id]
+    nodes_set = set()
+    for row in edges_df.iterrows():
+        node1 = row[1].node_id_1
+        node2 = row[1].node_id_2
+        nodes_set.add(node1)
+        nodes_set.add(node2)
+    nodes = [node for node in nodes_set if node != node_id]
+    return nodes
+
 
 
 def get_node_from_block(block_id):
