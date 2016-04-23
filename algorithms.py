@@ -106,7 +106,7 @@ def get_parking_spot(destination, time, algorithm):
     if algorithm == 'd':
         chosen_block, chosen_node = deterministic_grav_pull(block_list, destination, time)
     elif algorithm.startswith('p'):
-        if algorithm == 'p'
+        if algorithm == 'p':
             chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time)
         else:
             chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time, fine_grained=False)
