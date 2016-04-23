@@ -7,29 +7,6 @@ import pandas
 data_path = './data/{0}.csv'
 
 
-def reset_live_data(congestion=0):
-    df = pandas.read_csv(data_path.format('real_time_data_with_time'))
-    df = introduce_congestion(df, congestion)
-    df.to_csv(data_path.format('real_time_data_with_time_live'))
-
-
-def introduce_congestion(df, congestion):
-    total_spots = sum([i for i in df['available']])
-    number_of_removed_spots = (congestion * total_spots) // 100
-    for i in range(0, len(df)):
-        row = df.iloc[i]
-        if row.available > 0:
-            num = random.randint(0, row.available)
-            row.available -= num
-            number_of_removed_spots -= num
-            df.iloc[i] = row
-
-        if number_of_removed_spots == 0:
-            break
-
-    return df
-
-
 def get_nodes():
     return pandas.read_csv(data_path.format('Nodes_FishermansWharf'))
 
@@ -65,6 +42,33 @@ def get_availability():
     return df
 
 
+def get_distances():
+    return pandas.read_csv(data_path.format('Nodes_FishermansWharf_Distances'))
+
+
+def reset_live_data(congestion=0):
+    df = pandas.read_csv(data_path.format('real_time_data_with_time'))
+    df = introduce_congestion(df, congestion)
+    df.to_csv(data_path.format('real_time_data_with_time_live'))
+
+
+def introduce_congestion(df, congestion):
+    total_spots = sum([i for i in df['available']])
+    number_of_removed_spots = (congestion * total_spots) // 100
+    for i in range(0, len(df)):
+        row = df.iloc[i]
+        if row.available > 0:
+            num = random.randint(0, row.available)
+            row.available -= num
+            number_of_removed_spots -= num
+            df.iloc[i] = row
+
+        if number_of_removed_spots == 0:
+            break
+
+    return df
+
+
 def remove_block(block_id, timestamp):
     availability_df = get_availability()
     last_block = get_last_block_row(block_id, timestamp)
@@ -80,30 +84,6 @@ def remove_block(block_id, timestamp):
     availability_df = availability_df.append({'block_id': block_id, 'timestamp': timestamp, 'day': day,
         'month': month, 'hour': hour, 'weekday': weekday, 'no_blocks': no_blocks, 'available': availability})
     availability_df.to_csv(data_path.format('real_time_data_with_time_live'))
-
-
-def get_distances():
-    return pandas.read_csv(data_path.format('Nodes_FishermansWharf_Distances'))
-
-
-def get_distance_google_maps(origin, destination):
-    
-    dist_text = ""
-    dist_value = 0 #in meters
-
-    gmaps = googlemaps.Client(key="AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0")
-    
-    # ex: gmaps.distance_matrix(["37.808322,-122.419212"], ["37.808436,-122.414186"])
-    dm_result = gmaps.distance_matrix(origin, destination)
-    dm_rows = dm_result.get("rows",None)
-
-    for a_dm_row in dm_rows:
-        elem_list = a_dm_row.get("elements",None)
-        # there should be only one elem since only one origin and destination is passed
-        dist_text = elem_list[0].get("distance").get("text")
-        dist_value = elem_list[0].get("distance").get("value")
-            
-    return dist_text, dist_value
 
 
 def get_last_block_row(block_id, time):
@@ -123,7 +103,7 @@ def get_block_availability(block_id, time):
 
 def get_adjacent_nodes(node_id):
     edges_df = get_edges()
-    edges_df = edges_df[edges_df['node_id_1'] == node_id | edges_df['node_id_2'] == node_id]
+    edges_df = edges_df[(edges_df['node_id_1'] == node_id) | (edges_df['node_id_2'] == node_id)]
     nodes_set = set()
     for row in edges_df.iterrows():
         node1 = row[1].node_id_1
@@ -132,7 +112,6 @@ def get_adjacent_nodes(node_id):
         nodes_set.add(node2)
     nodes = [node for node in nodes_set if node != node_id]
     return nodes
-
 
 
 def get_node_from_block(block_id):
@@ -160,11 +139,52 @@ def get_long_lat(node_id):
     return long_lat
 
 
+def get_distance_from_block_to_node(block_id, node_id):
+    node1, node2 = get_node_from_block(block_id)
+    if node1 == node_id:
+        block_distance = get_distance(node_id, node2)
+        current_node = node2
+    elif node2 == node_id:
+        block_distance = get_distance(node_id, node1)
+        current_node = node1
+    else:
+        block_distance_to_node1 = get_distance(node_id, node1)
+        block_distance_to_node2 = get_distance(node_id, node2)
+        if block_distance_to_node1 >= block_distance_to_node2:
+            current_node = node1
+            block_distance = block_distance_to_node1
+        else:
+            current_node = node2
+            block_distance = block_distance_to_node2
+    return current_node, block_distance
+
+
 def get_distance(node1, node2):
     distance_df = get_distances()
     row = distance_df[(distance_df['node_id_1'] == node1) & (distance_df['node_id_2'] == node2)].iloc[0]
     distance = row.distance
     return distance
+
+
+def get_distance_google_maps(origin, destination):
+    
+    dist_text = ""
+    dist_value = 0 #in meters
+
+    gmaps = googlemaps.Client(key="AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0")
+    
+    # ex: gmaps.distance_matrix(["37.808322,-122.419212"], ["37.808436,-122.414186"])
+    dm_result = gmaps.distance_matrix(origin, destination)
+    dm_rows = dm_result.get("rows",None)
+
+    for a_dm_row in dm_rows:
+        elem_list = a_dm_row.get("elements",None)
+        # there should be only one elem since only one origin and destination is passed
+        dist_text = elem_list[0].get("distance").get("text")
+        dist_value = elem_list[0].get("distance").get("value")
+            
+    return dist_text, dist_value
+
 
 
 def _value_in_datetime(datetime_object, value, attribute):
@@ -176,7 +196,6 @@ def _value_in_datetime(datetime_object, value, attribute):
         value_in_datetime = True
 
     return value_in_datetime
-
 
 
 def get_block_probability(block_id, time, fine_grained=True):
@@ -203,8 +222,12 @@ def get_block_probability(block_id, time, fine_grained=True):
 
 
 def format_results(data):
-    fieldnames = ['input_no', 'distance']
-    formatted_data = [{'input_no': row_num + 1, 'distance': row['distance']} for row_num, row in enumerate(data)]
+    fieldnames = ['input_no', 'distance', 'uninformed_search_distance', 'walking_distance', 'running_time']
+    formatted_data = []
+    for row_num, row in enumerate(data):
+        data_row = {'input_no': row_num + 1, 'distance': row['distance'], 'walking_distance': row['walking_distance'], \
+        'uninformed_search_distance': row['uninformed_search_distance'], 'running_time': row['running_time']}
+        formatted_data.append(data_row)
     return formatted_data, fieldnames
 
 
