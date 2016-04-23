@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 import googlemaps
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
-    get_long_lat, get_block_availability, get_distance, get_block_probability, reset_live_data, read_input_from_file, \
-    write_results_to_file
+    get_long_lat, get_block_availability, get_distance, get_block_probability, get_adjacent_nodes, \
+    reset_live_data, read_input_from_file, write_results_to_file
 
 
-def deterministic_grav_pull(block_list, origin, time):
+def deterministic_grav_pull(block_list, destination, time):
     block_grav_force = {}
     chosen_block = None
     chosen_node = None
@@ -15,15 +15,15 @@ def deterministic_grav_pull(block_list, origin, time):
         availability = get_block_availability(block, time)
         if availability != 0:
             node1, node2 = get_node_from_block(block)
-            if node1 == origin:
-                block_distance = get_distance(origin, node2)
+            if node1 == destination:
+                block_distance = get_distance(destination, node2)
                 current_node = node2
-            elif node2 == origin:
-                block_distance = get_distance(origin, node1)
+            elif node2 == destination:
+                block_distance = get_distance(destination, node1)
                 current_node = node1
             else:
-                block_distance_to_node1 = get_distance(origin, node1)
-                block_distance_to_node2 = get_distance(origin, node2)
+                block_distance_to_node1 = get_distance(destination, node1)
+                block_distance_to_node2 = get_distance(destination, node2)
                 block_distance = min(block_distance_to_node1, block_distance_to_node2)
                 if block_distance_to_node1 >= block_distance_to_node2:
                     current_node = node1
@@ -40,23 +40,28 @@ def deterministic_grav_pull(block_list, origin, time):
     return chosen_block, chosen_node
 
 
-def probabilistic_grav_pull(block_list, origin, time):
+def probabilistic_grav_pull(block_list, destination, time):
     block_grav_force = {}
     chosen_block = None
+    chosen_node = None
+    current_node = None
     max_force = 0
     for block in block_list:
         probability = get_block_probability(block, time)
         if probability != 0:
             node1, node2 = get_node_from_block(block)
-            if node1 == origin:
-                block_distance = get_distance(origin, node2)
-            elif node2 == origin:
-                block_distance = get_distance(origin, node1)
+            if node1 == destination:
+                block_distance = get_distance(destination, node2)
+            elif node2 == destination:
+                block_distance = get_distance(destination, node1)
             else:
-                # block_distance_to_node1 = get_distance(origin, node1)
-                # block_distance_to_node2 = get_distance(origin, node2)
-                block_distance = min(get_distance(origin, node1), get_distance(origin, node2))
-                # block_distance = min(block_distance_to_node1, block_distance_to_node2)
+                block_distance_to_node1 = get_distance(destination, node1)
+                block_distance_to_node2 = get_distance(destination, node2)
+                block_distance = min(block_distance_to_node1, block_distance_to_node2)
+                if block_distance_to_node1 >= block_distance_to_node2:
+                    current_node = node1
+                else:
+                    current_node = node2
             block_grav_force[block] = probability / block_distance ** 2
         else:
             block_grav_force[block] = 0
@@ -64,12 +69,20 @@ def probabilistic_grav_pull(block_list, origin, time):
         if max_force < block_grav_force[block]:
             max_force = block_grav_force[block]
             chosen_block = block
-    
-    return chosen_block
+            chosen_node = current_node
+    return chosen_block, chosen_node
 
 
-def uninformed_search():
-    pass
+def uninformed_search(origin, destination, worst_case=False):
+    distance += get_distance(origin, destination)
+    extra_distance = 0
+    adjacent_nodes = get_adjacent_nodes(destination)
+    for node in adjacent_nodes:
+        extra_distance += get_distance(destination, node)
+
+    if not worst_case:
+        extra_distance /= 2
+    return distance + extra_distance
 
 
 #
@@ -111,12 +124,12 @@ def get_turn_by_turn_directions(origin, destination, departure_time):
     return dir_list
  
 
-def get_parking_spot(origin, destination, time, algorithm):
+def get_parking_spot(destination, time, algorithm):
     block_list = get_block_list()
     if algorithm == 'd':
-        chosen_block, chosen_node = deterministic_grav_pull(block_list, origin, time)
+        chosen_block, chosen_node = deterministic_grav_pull(block_list, destination, time)
     elif algorithm == 'p':
-        chosen_block, chosen_node = probabilistic_grav_pull(block_list, origin, time)
+        chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time)
     else:
         print('algorithm should be d for deterministic_grav_pull or p for probabilistic_grav_pull')
         chosen_block = -1
@@ -154,7 +167,7 @@ def check_sample(seed):
 
 def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     chosen_block = {}
-    chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(origin, destination, time, algorithm)
+    chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(destination, time, algorithm)
     if not chosen_block.get('block_id'):
         return None
     directions = get_directions(origin, chosen_block['node_id'], time)
@@ -175,7 +188,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
         if next(sampler):
             block_availability = get_block_availability(chosen_block['block_id'], time)
             if block_availability == 0:
-                chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(origin, destination, time, algorithm)
+                chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(destination, time, algorithm)
                 
                 if chosen_block['block_id'] == -1:
                     distance = -1
@@ -235,6 +248,8 @@ def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file
 
     for i in input_data:
         result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
+        uninformed_search_distance = uninformed_search(i['origin'], i['destination'])
+        result['uninformed_search_distance'] = uninformed_search_distance
         output_data.append(result)
 
     fieldnames = output_data[0].keys()
