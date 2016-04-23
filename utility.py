@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 import random
 import pandas
+from numpy import isnan
 
 
 data_path = './data/{0}.csv'
@@ -49,24 +50,24 @@ def get_distances():
 def reset_live_data(congestion=0):
     df = pandas.read_csv(data_path.format('real_time_data_with_time'))
     df = introduce_congestion(df, congestion)
-    df.to_csv(data_path.format('real_time_data_with_time_live'))
+    df.to_csv(data_path.format('real_time_data_with_time_live'), index=False)
 
 
 def introduce_congestion(df, congestion):
     total_spots = sum([i for i in df['available']])
     number_of_removed_spots = (congestion * total_spots) // 100
-    for i in range(0, len(df)):
-        row = df.iloc[i]
-        if row.available > 0:
-            num = random.randint(0, row.available)
-            row.available -= num
-            number_of_removed_spots -= num
-            df.iloc[i] = row
-
-        if number_of_removed_spots == 0:
-            break
-
-    return df
+    new_df = pandas.DataFrame([], columns=df.columns)
+    if congestion == 0:
+        new_df = df
+    else:
+        for i in range(0, len(df)):
+            row = df.iloc[i].copy()
+            if row.available > 0:
+                num = random.randint(0, row.available)
+                row.available = row.available - num
+                number_of_removed_spots -= num
+            new_df = new_df.append(row)
+    return new_df
 
 
 def remove_block(block_id, timestamp):
@@ -217,7 +218,8 @@ def get_block_probability(block_id, time, fine_grained=True):
 
     day_time_df = day_df[day_df['hour'] == hour]
     probability = (day_time_df['available'] / day_time_df['no_blocks']).mean()
-
+    if isnan(probability):
+        probability = 0
     return probability
 
 
