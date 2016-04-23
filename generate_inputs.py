@@ -32,26 +32,32 @@ def get_node():
     return str(randrange(7001, 7041))
 
 
+def generate_input_line():
+    year = 2012
+    input_line = ''
+    month = get_month()
+    day = get_day(month)
+    hour = get_hour()
+    minute = get_minute_or_second()
+    second = get_minute_or_second()
+    microsecond = get_microsecond()
+    origin = get_node()
+    destination = get_node()
+    while destination == origin:
+        destination = get_node()
+    date_time = datetime(year, month, day, hour, minute, second, microsecond)
+    date_time_str = date_time.strftime('%Y-%m-%d %H:%M:%S.%f')
+    input_line = ','.join([origin, destination, date_time_str]) + '\n'
+    return input_line
+
+
 def main():
     iterations = int(sys.argv[1])
     file_name = sys.argv[2]
-    year = 2012
     input_data = ['origin,destination,time\n']
     for i in range(iterations):
-        input_line = ''
-        month = get_month()
-        day = get_day(month)
-        hour = get_hour()
-        minute = get_minute_or_second()
-        second = get_minute_or_second()
-        microsecond = get_microsecond()
-        origin = get_node()
-        destination = get_node()
-        date_time = datetime(year, month, day, hour, minute, second, microsecond)
-        date_time_str = date_time.strftime('%Y-%m-%d %H:%M:%S.%f')
-        input_line = ','.join([origin, destination, date_time_str]) + '\n'
-        input_data.append(input_line)
-
+        line_data = generate_input_line()    
+        input_data.append(line_data)
 
     with open(file_name, 'w') as input_file:
         input_file.writelines(input_data)
