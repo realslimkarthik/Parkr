@@ -1,6 +1,5 @@
 from time import time as time_fn
 from datetime import datetime, timedelta
-import googlemaps
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
     get_long_lat, get_block_availability, get_distance, \
     get_distance_from_block_to_node, get_block_probability, get_adjacent_nodes, \
@@ -156,7 +155,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
-    threshold = 0.05
+    threshold = 0.005
     current_location = None
     routing_data = {}
     routing_data['success'] = True
