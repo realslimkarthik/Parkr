@@ -2,8 +2,9 @@ from time import time as time_fn
 from datetime import datetime, timedelta
 import googlemaps
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
-    get_long_lat, get_block_availability, get_distance, get_distance_from_block_to_node, get_block_probability, \
-    get_adjacent_nodes, reset_live_data, read_input_from_file, write_results_to_file
+    get_long_lat, get_block_availability, get_distance, \
+    get_distance_from_block_to_node, get_block_probability, get_adjacent_nodes, \
+    reset_live_data, read_input_from_file, write_results_to_file
 
 
 def deterministic_grav_pull(block_list, destination, time):
@@ -32,6 +33,7 @@ def probabilistic_grav_pull(block_list, destination, time, fine_grained=True):
     chosen_block = None
     chosen_node = None
     current_node = None
+    max_prob = 0
     max_force = 0
     for block in block_list:
         probability = get_block_probability(block, time, fine_grained)
@@ -45,7 +47,8 @@ def probabilistic_grav_pull(block_list, destination, time, fine_grained=True):
             max_force = block_grav_force[block]
             chosen_block = block
             chosen_node = current_node
-    return chosen_block, chosen_node
+            max_prob = probability
+    return chosen_block, chosen_node, max_prob
 
 
 def uninformed_search(origin, destination, worst_case=False):
@@ -101,18 +104,19 @@ def get_turn_by_turn_directions(origin, destination, departure_time):
 
 def get_parking_spot(destination, time, algorithm):
     block_list = get_block_list()
+    probability = None
     if algorithm == 'd':
         chosen_block, chosen_node = deterministic_grav_pull(block_list, destination, time)
     elif algorithm.startswith('p'):
         if algorithm == 'p':
-            chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time)
+            chosen_block, chosen_node, probability = probabilistic_grav_pull(block_list, destination, time)
         else:
-            chosen_block, chosen_node = probabilistic_grav_pull(block_list, destination, time, fine_grained=False)
+            chosen_block, chosen_node, probability = probabilistic_grav_pull(block_list, destination, time, fine_grained=False)
     else:
         print('algorithm should be d for deterministic_grav_pull or p for probabilistic_grav_pull')
         chosen_block = -1
     
-    return chosen_block, chosen_node
+    return chosen_block, chosen_node, probability
 
 
 def get_directions(origin, destination, time):
@@ -145,13 +149,14 @@ def check_sample(seed):
 
 def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     chosen_block = {}
-    chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(destination, time, algorithm)
+    chosen_block['block_id'], chosen_block['node_id'], probability = get_parking_spot(destination, time, algorithm)
     if not chosen_block.get('block_id'):
         return None
     directions = get_directions(origin, chosen_block['node_id'], time)
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
+    threshold = 0.05
     current_location = None
     routing_data = {}
     routing_data['success'] = True
@@ -164,23 +169,42 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
         seconds = step['duration']['value']
         time = time + timedelta(seconds=seconds)
         if next(sampler):
-            block_availability = get_block_availability(chosen_block['block_id'], time)
-            if block_availability == 0:
-                chosen_block['block_id'], chosen_block['node_id'] = get_parking_spot(destination, time, algorithm)
-                
-                if chosen_block['block_id'] == -1:
-                    distance = -1
-                    break
-                intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
-                current_location = intermediate_point
-                routing_data['points'].append(intermediate_point)
-                new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
-                if get_distance(origin, new_node1) < get_distance(origin, new_node2):
-                    chosen_block['node_id'] = new_node1
-                else:
-                    chosen_block['node_id'] = new_node2
-                directions == get_directions(current_location, chosen_block['node_id'], time)
-                step_index = 0
+            if algorithm == 'd':
+                block_availability = get_block_availability(chosen_block['block_id'], time)
+                if block_availability == 0:
+                    chosen_block['block_id'], chosen_block['node_id'], _ = get_parking_spot(destination, time, algorithm)
+                    if chosen_block['block_id'] is None:
+                        return None
+
+                    intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                    current_location = intermediate_point
+                    routing_data['points'].append(intermediate_point)
+                    new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
+                    if get_distance(origin, new_node1) < get_distance(origin, new_node2):
+                        chosen_block['node_id'] = new_node1
+                    else:
+                        chosen_block['node_id'] = new_node2
+                    directions == get_directions(current_location, chosen_block['node_id'], time)
+                    step_index = 0
+            elif algorithm.startswith('p'):
+                new_prob = get_block_probability(chosen_block['block_id'], time)
+                if abs(probability - new_prob) > threshold:
+                    chosen_block['block_id'], chosen_block['node_id'], probability = get_parking_spot(destination, time, algorithm)
+                    if chosen_block['block_id'] is None:
+                        return None
+
+                    intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                    current_location = intermediate_point
+                    routing_data['points'].append(intermediate_point)
+                    new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
+                    if get_distance(origin, new_node1) < get_distance(origin, new_node2):
+                        chosen_block['node_id'] = new_node1
+                    else:
+                        chosen_block['node_id'] = new_node2
+                    directions == get_directions(current_location, chosen_block['node_id'], time)
+                    step_index = 0
+
+
 
         step_index += 1
         if step_index == len(directions):
