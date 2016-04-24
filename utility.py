@@ -225,25 +225,27 @@ def get_block_probability(block_id, time, fine_grained=True):
 
 def format_results(data):
     fieldnames = ['input_no', 'distance', 'uninformed_search_distance', 'walking_distance', 'running_time']
-    formatted_data = []
-    for row_num, row in enumerate(data):
-        data_row = {'input_no': row_num + 1, 'distance': row['distance'], 'walking_distance': row['walking_distance'], \
-        'uninformed_search_distance': row['uninformed_search_distance'], 'running_time': row['running_time']}
-        formatted_data.append(data_row)
+    formatted_data = {'input_no': data['input_no'], 'distance': data['distance'], 'walking_distance': data['walking_distance'], \
+        'uninformed_search_distance': data['uninformed_search_distance'], 'running_time': data['running_time']}
+    # for row_num, row in enumerate(data):
+    #     data_row = {'input_no': row_num + 1, 'distance': row['distance'], 'walking_distance': row['walking_distance'], \
+    #     'uninformed_search_distance': row['uninformed_search_distance'], 'running_time': row['running_time']}
+    #     formatted_data.append(data_row)
     return formatted_data, fieldnames
 
 
-def write_results_to_file(data, fieldnames, file_name):
+def write_results_to_file(data, fieldnames, file_name, header=False):
     formatted_data, new_fields = format_results(data)
-    with open(file_name, 'w') as csvfile:
+    with open(file_name, 'a') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=new_fields)
-        writer.writeheader()
-        for row in formatted_data:
-            writer.writerow(row)
+        if header:
+            writer.writeheader()
+        writer.writerow(formatted_data)
 
 
-def read_input_from_file(input_file):
-    df = pandas.read_csv(input_file)
+def read_input_from_file(input_file, skip_rows):
+    df = pandas.read_csv(input_file, skiprows=skip_rows)
+    df.columns = ['origin', 'destination', 'time']
 
     def convert_to_datetime(date_time_str):
         date_str, time_str = date_time_str.split()
