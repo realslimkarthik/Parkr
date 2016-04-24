@@ -1,6 +1,7 @@
 from time import time as time_fn
 from datetime import datetime, timedelta
 import googlemaps
+from credentials import get_api_key
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
     get_long_lat, get_block_availability, get_distance, \
     get_distance_from_block_to_node, get_block_probability, get_adjacent_nodes, \
@@ -89,7 +90,7 @@ def uninformed_search(origin, destination, worst_case=False):
 def get_turn_by_turn_directions(origin, destination, departure_time):
     
     dir_list = [];
-    gmaps = googlemaps.Client(key="AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0")
+    gmaps = googlemaps.Client(key=get_api_key(2))
 
     dir_result = gmaps.directions(origin, destination,
         mode="driving", departure_time=datetime.now())
@@ -156,7 +157,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
-    threshold = 0.005
+    threshold = 0.000005
     current_location = None
     routing_data = {}
     routing_data['success'] = True
@@ -251,20 +252,26 @@ def simulate(origin, destination, time, algorithm, sampling_rate):
     return route_result
 
 
-def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file_name):
+def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file_name, skip_lines):
     reset_live_data(congestion)
-    input_data = read_input_from_file(input_file)
+    input_data = read_input_from_file(input_file, skip_rows=skip_lines)
     output_data = []
+    input_no = 1
+    header = True
 
     for i in input_data:
         result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
         uninformed_search_distance = uninformed_search(i['origin'], i['destination'])
         result['uninformed_search_distance'] = int(uninformed_search_distance)
+        result['input_no'] = input_no
+        input_no += 1
         print(result)
         output_data.append(result)
+        fieldnames = output_data[0].keys()
+        write_results_to_file(result, fieldnames, output_file_name, header)
+        if header:
+            header = False
 
-    fieldnames = output_data[0].keys()
-    write_results_to_file(output_data, fieldnames, output_file_name)
     return output_data
 
 
