@@ -54,7 +54,7 @@ def reset_live_data(congestion=0):
 
 
 def introduce_congestion(df, congestion):
-    if congestion >= 0 and congestion <= 10:
+    if congestion >= 1 and congestion <= 10:
         return pandas.read_csv(data_path.format('real_time_data_with_time_c10_live'))
     elif congestion > 10 and congestion <= 20:
         return pandas.read_csv(data_path.format('real_time_data_with_time_c20_live'))
