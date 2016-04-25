@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import googlemaps
 from credentials import get_api_key
 from utility import get_nodes, get_edges, get_block_list, get_availability, get_node_from_block, \
-    get_long_lat, get_block_availability, get_distance, \
+    get_long_lat, get_block_availability, get_distance, get_node_name, \
     get_distance_from_block_to_node, get_block_probability, get_adjacent_nodes, \
     reset_live_data, read_input_from_file, write_results_to_file
 
@@ -88,12 +88,12 @@ def uninformed_search(origin, destination, worst_case=False):
 
 
 def get_turn_by_turn_directions(origin, destination, departure_time):
-    
-    dir_list = [];
-    gmaps = googlemaps.Client(key=get_api_key(2))
+    print('origin: ', origin, 'destination: ', destination)
+    dir_list = []
+    # gmaps = googlemaps.Client(key=get_api_key(0))
+    gmaps = googlemaps.Client(key='AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0')
 
-    dir_result = gmaps.directions(origin, destination,
-        mode="driving", departure_time=datetime.now())
+    dir_result = gmaps.directions(origin, destination)
     dir_result_legs = dir_result[0].get("legs",None)
     #there should be only one since there are no waypoints sent in the request
     if len(dir_result_legs) > 0:
@@ -124,15 +124,25 @@ def get_directions(origin, destination, time):
     if isinstance(origin, list):
         origin_long_lat = origin
     else:
+        # origin_long_lat = get_node_name(origin)
         origin_long_lat = get_long_lat(origin)
     
     if isinstance(destination, list):
         destination_long_lat = destination
     else:
+        # destination_long_lat = get_node_name(destination)
         destination_long_lat = get_long_lat(destination)
     
     directions = get_turn_by_turn_directions(origin_long_lat, destination_long_lat, time)
     return directions
+
+
+# def get_directions(origin, destination, time):
+#     origin_name = get_node_name(origin)
+#     destination_name = get_node_name(destination)
+    
+#     directions = get_turn_by_turn_directions(origin_name, destination_name, time)
+#     return directions
 
 
 def check_sample(seed):
@@ -157,7 +167,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
-    threshold = 0.000005
+    threshold = 0.005
     current_location = None
     routing_data = {}
     routing_data['success'] = True
@@ -194,7 +204,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
                     if chosen_block['block_id'] is None:
                         return None
 
-                    intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                    intermediate_point = [float(step['end_location']['lat']), float(step['end_location']['lng'])]
                     current_location = intermediate_point
                     routing_data['points'].append(intermediate_point)
                     new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
@@ -252,12 +262,11 @@ def simulate(origin, destination, time, algorithm, sampling_rate):
     return route_result
 
 
-def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file_name, skip_lines):
+def run_simulation(input_file, algorithm, sampling_rate, congestion, output_file_name, skip_lines=0, header=True):
     reset_live_data(congestion)
     input_data = read_input_from_file(input_file, skip_rows=skip_lines)
     output_data = []
-    input_no = 1
-    header = True
+    input_no = skip_lines + 1
 
     for i in input_data:
         result = simulate(i['origin'], i['destination'], i['time'], algorithm, sampling_rate)
