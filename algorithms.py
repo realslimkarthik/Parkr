@@ -90,8 +90,7 @@ def uninformed_search(origin, destination, worst_case=False):
 def get_turn_by_turn_directions(origin, destination, departure_time):
     print('origin: ', origin, 'destination: ', destination)
     dir_list = []
-    # gmaps = googlemaps.Client(key=get_api_key(0))
-    gmaps = googlemaps.Client(key='AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0')
+    gmaps = googlemaps.Client(key=get_api_key(0))
 
     dir_result = gmaps.directions(origin, destination)
     dir_result_legs = dir_result[0].get("legs",None)
