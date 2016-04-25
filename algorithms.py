@@ -166,7 +166,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
     sampler = check_sample(sampling_rate)
     distance = 0
     step_index = 0
-    threshold = 0.005
+    threshold = 0.00005
     current_location = None
     routing_data = {}
     routing_data['success'] = True

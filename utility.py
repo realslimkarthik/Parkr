@@ -54,6 +54,14 @@ def reset_live_data(congestion=0):
 
 
 def introduce_congestion(df, congestion):
+    if congestion >= 0 and congestion <= 10:
+        return pandas.read_csv(data_path.format('real_time_data_with_time_c10_live'))
+    elif congestion > 10 and congestion <= 20:
+        return pandas.read_csv(data_path.format('real_time_data_with_time_c20_live'))
+    elif congestion > 20 and congestion <= 30:
+        return pandas.read_csv(data_path.format('real_time_data_with_time_c30_live'))
+    elif congestion > 30 and congestion <= 60:
+        return pandas.read_csv(data_path.format('real_time_data_with_time_c60_live'))
     total_spots = sum([i for i in df['available']])
     number_of_removed_spots = (congestion * total_spots) // 100
     new_df = pandas.DataFrame([], columns=df.columns)
@@ -138,6 +146,13 @@ def get_long_lat(node_id):
     latitude = row.latitude
     long_lat = [float(longitude), float(latitude)]
     return long_lat
+
+
+def get_node_name(node_id):
+    nodes_df = get_nodes()
+    row = nodes_df[nodes_df['node_id'] == int(node_id)]
+    node_name = row.iloc[0].block_name
+    return node_name
 
 
 def get_distance_from_block_to_node(block_id, node_id):
