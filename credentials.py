@@ -1,5 +1,5 @@
-
-api_keys = ['AIzaSyDTsEj1fyHnK0ZuKUE-4ibcsLn3--dIOqQ', 'AIzaSyDPxsz5WxM_rqmM6ROL97Gthf48qEk5rs0', 'AIzaSyCA05mXImoTbKc_wB9ruDZlJbn4_6FuyA8']
+# Enter an API Key in the api_keys list as a string
+api_keys = []
 
 
 keys_len = len(api_keys)
