@@ -274,3 +274,20 @@ def read_input_from_file(input_file, skip_rows):
 
     input_data = df.to_dict('records')
     return input_data
+
+def get_node_id_from_name(nodename):
+    nodes_df = get_nodes()
+    node = nodes_df[nodes_df['block_name'] == nodename]  
+    return node.iloc[0].node_id
+
+def convert_to_datetime_duplicate(date_time_str):
+    print(date_time_str.split())
+    date_str, time_str, clock_str = date_time_str.split()
+    month, day, year = [int(i) for i in date_str.split('/')]
+    
+    hour, minute = [int(i) for i in time_str.split(':')]
+    
+    if clock_str == 'PM':
+        hour += 12        
+
+    return datetime(year, month, day, hour, minute, 0, 0)
