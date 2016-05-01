@@ -186,7 +186,7 @@ def route_vehicle(origin, destination, time, algorithm, sampling_rate):
                     if chosen_block['block_id'] is None:
                         return None
 
-                    intermediate_point = [float(step['end_location']['lng']), float(step['end_location']['lat'])]
+                    intermediate_point = [float(step['end_location']['lat']), float(step['end_location']['lng'])]
                     current_location = intermediate_point
                     routing_data['points'].append(intermediate_point)
                     new_node1, new_node2 = get_node_from_block(chosen_block['block_id'])
