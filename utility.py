@@ -288,6 +288,11 @@ def convert_to_datetime_duplicate(date_time_str):
     hour, minute = [int(i) for i in time_str.split(':')]
     
     if clock_str == 'PM':
-        hour += 12        
+        if hour != 12:
+            hour += 12
+
+    if clock_str == 'AM':
+        if hour == 12:
+            hour = 0
 
     return datetime(year, month, day, hour, minute, 0, 0)
