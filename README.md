@@ -1,5 +1,9 @@
 # Parkr
-UIC CS course CS581's Search for Spatio Temporal Resources course project. This project is implemented in Python 3.
+UIC CS course CS581's Search for Spatio Temporal Resources course project for Team 4 that consists of 
+  
+  * Ayush Chugh (achugh4)
+  * Karthik Hariharan (kharih2)
+  * Kiran Sheena Marakala (ksheen3)
 
 
 ### Installing packages
@@ -22,8 +26,16 @@ Generate a Google Maps API key (ideally a server key) and enable Directions and 
 `api_keys = ['<YOUR_API_KEY_HERE>]'`
 
 
+### Running a Simulation on the browser
+After installing the necessary packages, you can run the web server by typing the following command on a command prompt/terminal
 
-### Running Simulations
+`python3 parkr.py`
+
+This above command will start a web server that is listening for incoming connection requests on port 5000 of the localhost, so going to `http://localhost:5000` on the browser will open the web page. After entering the corresponding inputs, the server will compute the best parking spot (this may take upto a minute) and the route and it will be displayed on the web page as shown below.
+
+![Web Page Simulation](https://raw.githubusercontent.com/realslimkarthik/Parkr/master/Web_Page_Screenshot.png "Browser Simulation")
+
+### Running Simulations Command Line
 In order to run a simulation, run the `simulate.py` script. This script will require a simulation input file, similar to the one that can be found at `simulations/simulation_input.csv`. Newer simulation inputs can be generated using the `generate_inputs.py` running it as below
 
 `python3 generate_inputs.py 100 simulations/simulation_input.csv`
